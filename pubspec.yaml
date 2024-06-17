@@ -1,0 +1,21 @@
+name: task_checker
+description: Task status checker project.
+
+# Add this section to specify the Dart SDK version constraint.
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Add other dependencies if you have any.
+  # Example:
+  # cupertino_icons: ^1.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
