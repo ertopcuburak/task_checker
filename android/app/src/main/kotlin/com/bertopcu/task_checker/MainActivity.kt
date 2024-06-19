@@ -1,4 +1,4 @@
-package com.example.task_checker
+package com.bertopcu.task_checker
 
 import io.flutter.embedding.android.FlutterActivity
 

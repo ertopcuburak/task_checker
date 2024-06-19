@@ -1,5 +1,7 @@
 name: task_checker
 description: Task status checker project.
+version: 1.0.2
+
 
 # Add this section to specify the Dart SDK version constraint.
 environment:
