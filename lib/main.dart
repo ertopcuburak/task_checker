@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'task_details_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'task_details_screen.dart'; // Import TaskDetailsScreen
 
 void main() {
   runApp(TaskCheckerApp());
@@ -32,31 +33,60 @@ class TaskListScreen extends StatefulWidget {
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
-  final List<Task> _tasks = [];
+  late List<Task> _tasks;
 
-  void _addTask(String title, String description) {
+  @override
+  void initState() {
+    super.initState();
+    _tasks = [];
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
     setState(() {
-      _tasks.add(Task(title: title, description: description));
+      _tasks = keys
+          .where((key) => key.trim().isNotEmpty)
+          .map((key) => Task(
+        title: key,
+        description: prefs.getString(key) ?? "",
+      ))
+          .toList();
     });
   }
 
-  void _editTask(int index, String title, String description) {
+  Future<void> _addTask(String title, String description) async {
+    final newTask = Task(title: title, description: description);
+    setState(() {
+      _tasks.add(newTask);
+    });
+    await storeData(title, description);
+  }
+
+  Future<void> _editTask(int index, String title, String description) async {
+    final oldTitle = _tasks[index].title;
     setState(() {
       _tasks[index].title = title;
       _tasks[index].description = description;
     });
+    await clearDataByKey(oldTitle);
+    await storeData(title, description);
   }
 
   void _toggleTaskDone(int index) {
     setState(() {
       _tasks[index].isDone = !_tasks[index].isDone;
     });
+    // You may want to store the updated task status here if needed
   }
 
-  void _deleteTask(int index) {
+  Future<void> _deleteTask(int index) async {
+    final key = _tasks[index].title;
     setState(() {
       _tasks.removeAt(index);
     });
+    await clearDataByKey(key);
   }
 
   void _showTaskDetails(Task task) {
@@ -67,9 +97,20 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
+  Future<void> storeData(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+  }
+
+  Future<void> clearDataByKey(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(key);
+  }
+
   void _showTaskForm({Task? task, int? index}) {
     final titleController = TextEditingController(text: task?.title ?? '');
-    final descriptionController = TextEditingController(text: task?.description ?? '');
+    final descriptionController =
+    TextEditingController(text: task?.description ?? '');
 
     showDialog(
       context: context,
@@ -97,11 +138,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
               child: Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 if (task == null) {
-                  _addTask(titleController.text, descriptionController.text);
+                  await _addTask(
+                      titleController.text, descriptionController.text);
                 } else if (index != null) {
-                  _editTask(index, titleController.text, descriptionController.text);
+                  await _editTask(index, titleController.text,
+                      descriptionController.text);
                 }
                 Navigator.of(context).pop();
               },
@@ -119,7 +162,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
       appBar: AppBar(
         title: Text('Task Checker'),
       ),
-      body: ListView.builder(
+      body: _tasks.isEmpty
+          ? Center(child: Text('No tasks found'))
+          : ListView.builder(
         itemCount: _tasks.length,
         itemBuilder: (context, index) {
           final task = _tasks[index];
@@ -131,13 +176,16 @@ class _TaskListScreenState extends State<TaskListScreen> {
               },
             ),
             title: Text(task.title),
-            subtitle: task.description.isNotEmpty ? Text(task.description) : null,
+            subtitle: task.description.isNotEmpty
+                ? Text(task.description)
+                : null,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
                   icon: Icon(Icons.edit),
-                  onPressed: () => _showTaskForm(task: task, index: index),
+                  onPressed: () =>
+                      _showTaskForm(task: task, index: index),
                 ),
                 IconButton(
                   icon: Icon(Icons.delete),
@@ -145,7 +193,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 ),
               ],
             ),
-            onTap: () => _showTaskDetails(task),
+            onTap: () => _showTaskDetails(task), // Navigate to TaskDetailsScreen
           );
         },
       ),
